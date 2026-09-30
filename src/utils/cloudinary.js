@@ -1,0 +1,47 @@
+import {v2 as cloudinary} from "cloudinary";
+import fs from "fs";
+import { extractPublicId } from "cloudinary-build-url";
+
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+const uploadOnCloudinary = async (localFilePath) => {
+    try {
+        if(!localFilePath) return null;
+
+        const response = await cloudinary.uploader.upload(localFilePath, {
+            resource_type: "auto",
+            use_filename: true,
+            unique_filename: true
+        });
+
+        fs.unlinkSync(localFilePath);
+        return response;
+    } catch (error) {
+        fs.unlinkSync(localFilePath);
+        console.log(`Cloudinary upload error: ${error}`);
+        return null;
+    }
+}
+
+const deleteFromCloudinary = async (cloudinaryUrl, resource_type = "raw") => {
+   if (!cloudinaryUrl) return null;
+
+   try {
+      const publicId = extractPublicId(cloudinaryUrl);
+
+      await cloudinary.uploader.destroy(publicId, {
+         resource_type: resource_type,
+      });
+
+      return true;
+   } catch (error) {
+      console.log(error?.message || `Cloudinary delete operation error`);
+      return false;
+   }
+};
+
+export { uploadOnCloudinary, deleteFromCloudinary };
